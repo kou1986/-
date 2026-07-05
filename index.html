@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <title>戒身</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕯</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #141415;
+      --text: #f5f0e8;
+      --text-muted: #8a8078;
+      --accent: #d4a574;
+      --accent-dim: #8a6a4a;
+      --success: #6a9a7a;
+      --danger: #9a5a5a;
+      --font-sans: 'Noto Serif SC', serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    #root { height: 100%; display: flex; flex-direction: column; }
+
+    .tab-bar {
+      display: flex;
+      border-top: 1px solid #222;
+      background: var(--bg);
+      padding: 8px 0 env(safe-area-inset-bottom, 8px);
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 6px 0;
+      transition: color 0.3s;
+    }
+    .tab-btn.active { color: var(--accent); }
+    .tab-btn:active { opacity: 0.6; }
+
+    .page { flex: 1; overflow-y: auto; padding: 32px 24px; display: none; }
+    .page.active { display: block; }
+
+    /* Home */
+    .streak-display { text-align: center; padding: 48px 0 40px; }
+    .streak-number {
+      font-family: var(--font-mono);
+      font-size: 80px;
+      font-weight: 300;
+      color: var(--accent);
+      line-height: 1;
+      letter-spacing: -4px;
+    }
+    .streak-unit { font-size: 18px; color: var(--text-muted); margin-top: 8px; letter-spacing: 4px; }
+    .streak-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; letter-spacing: 6px; text-transform: uppercase; }
+
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+    .stat-card { background: var(--surface); border: 1px solid #1e1e1e; border-radius: 3px; padding: 16px; text-align: center; }
+    .stat-val { font-family: var(--font-mono); font-size: 28px; color: var(--accent); }
+    .stat-lbl { font-size: 11px; color: var(--text-muted); letter-spacing: 2px; margin-top: 4px; }
+
+    .oath-section { text-align: center; padding: 24px 0; }
+    .oath-text { font-size: 15px; color: var(--text-muted); letter-spacing: 2px; line-height: 2; margin-bottom: 32px; }
+    .checkin-btn {
+      background: transparent;
+      border: 1px solid var(--accent-dim);
+      color: var(--accent);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      letter-spacing: 4px;
+      padding: 14px 40px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+    .checkin-btn:active { background: var(--accent-dim); }
+    .checkin-btn.checked { border-color: var(--success); color: var(--success); cursor: default; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 24px;
+    }
+    .modal { background: var(--surface); border: 1px solid #2a2a2a; border-radius: 4px; padding: 40px 32px; max-width: 320px; width: 100%; text-align: center; }
+    .modal-title { font-size: 20px; letter-spacing: 4px; margin-bottom: 16px; color: var(--accent); }
+    .modal-body { font-size: 14px; color: var(--text-muted); line-height: 2; margin-bottom: 32px; }
+    .modal-btn {
+      background: var(--accent); border: none; color: var(--bg);
+      font-family: var(--font-sans); font-size: 14px; letter-spacing: 4px;
+      padding: 12px 32px; cursor: pointer; border-radius: 2px; width: 100%;
+    }
+    .modal-btn:active { opacity: 0.8; }
+
+    .quote { text-align: center; padding: 24px 0 0; font-size: 13px; color: var(--text-muted); font-style: italic; line-height: 2; letter-spacing: 1px; }
+
+    /* Timer */
+    .timer-page { display: flex; flex-direction: column; align-items: center; padding-top: 60px; }
+    .timer-presets { display: flex; gap: 12px; margin-bottom: 48px; flex-wrap: wrap; justify-content: center; }
+    .preset-btn {
+      background: var(--surface); border: 1px solid #2a2a2a;
+      color: var(--text-muted); font-family: var(--font-mono); font-size: 14px;
+      padding: 8px 16px; cursor: pointer; border-radius: 2px; transition: all 0.3s;
+    }
+    .preset-btn.active { border-color: var(--accent); color: var(--accent); }
+
+    .breath-circle {
+      width: 200px; height: 200px; border-radius: 50%;
+      border: 1px solid var(--accent-dim);
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      margin-bottom: 48px; transition: transform 4s ease-in-out, border-color 0.5s;
+    }
+    .breath-circle.inhale { transform: scale(1.15); border-color: var(--accent); }
+    .breath-circle.exhale { transform: scale(1.0); border-color: var(--accent-dim); }
+    .breath-circle.hold { transform: scale(1.07); border-color: var(--accent-dim); }
+
+    .timer-display { font-family: var(--font-mono); font-size: 48px; font-weight: 300; color: var(--text); letter-spacing: -2px; }
+    .timer-phase { font-size: 12px; color: var(--text-muted); letter-spacing: 4px; text-transform: uppercase; margin-top: 8px; }
+    .timer-controls { display: flex; gap: 16px; }
+    .timer-btn {
+      background: transparent; border: 1px solid var(--accent-dim); color: var(--accent);
+      font-family: var(--font-sans); font-size: 14px; letter-spacing: 3px;
+      padding: 12px 28px; cursor: pointer; border-radius: 2px; transition: all 0.3s;
+    }
+    .timer-btn:active { background: var(--accent-dim); }
+    .timer-btn.cancel { border-color: var(--danger); color: var(--danger); }
+    .timer-btn.cancel:active { background: #3a2020; }
+    .timer-done { text-align: center; padding: 40px 0; }
+    .timer-done h3 { font-size: 20px; color: var(--success); letter-spacing: 4px; margin-bottom: 12px; }
+    .timer-done p { font-size: 14px; color: var(--text-muted); line-height: 2; }
+
+    /* Calendar */
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .cal-nav-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 8px 12px; }
+    .cal-month { font-size: 16px; letter-spacing: 4px; color: var(--text); }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .cal-day-name { font-size: 11px; color: var(--text-muted); letter-spacing: 2px; padding: 8px 0; }
+    .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 13px; border-radius: 2px; cursor: pointer; }
+    .cal-day.empty { background: none; }
+    .cal-day.checked { background: var(--success); color: var(--bg); }
+    .cal-day.unchecked { color: var(--text-muted); }
+    .cal-day.today { border: 1px solid var(--accent); color: var(--accent); }
+    .cal-day.future { color: #333; }
+
+    /* Settings */
+    .settings-list { list-style: none; }
+    .settings-item { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid #1a1a1a; }
+    .settings-label { font-size: 15px; color: var(--text); letter-spacing: 2px; }
+    .settings-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; letter-spacing: 1px; }
+    .toggle {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: #2a2a2a; border: none; cursor: pointer; position: relative; transition: background 0.3s;
+    }
+    .toggle.on { background: var(--accent-dim); }
+    .toggle::after {
+      content: ''; position: absolute; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--text); top: 3px; left: 3px; transition: left 0.3s;
+    }
+    .toggle.on::after { left: 23px; }
+    .settings-danger { margin-top: 40px; }
+    .settings-danger-btn {
+      background: transparent; border: 1px solid var(--danger); color: var(--danger);
+      font-family: var(--font-sans); font-size: 13px; letter-spacing: 3px;
+      padding: 12px 24px; cursor: pointer; border-radius: 2px; width: 100%;
+    }
+    .settings-danger-btn:active { background: #2a1515; }
+    .settings-export-btn {
+      background: transparent; border: 1px solid var(--accent-dim); color: var(--accent);
+      font-family: var(--font-sans); font-size: 13px; letter-spacing: 3px;
+      padding: 8px 16px; cursor: pointer; border-radius: 2px;
+    }
+
+    /* PIN lock */
+    .lock-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 200; padding: 32px;
+    }
+    .lock-title { font-size: 16px; letter-spacing: 4px; margin-bottom: 8px; color: var(--text-muted); }
+    .lock-dots { display: flex; gap: 16px; margin: 32px 0; }
+    .lock-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--accent-dim); transition: background 0.2s; }
+    .lock-dot.filled { background: var(--accent); }
+    .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 260px; }
+    .pin-key {
+      background: var(--surface); border: 1px solid #2a2a2a; color: var(--text);
+      font-family: var(--font-mono); font-size: 22px; padding: 18px; text-align: center;
+      cursor: pointer; border-radius: 2px; transition: background 0.15s;
+    }
+    .pin-key:active { background: #2a2a2a; }
+    .pin-key.empty { visibility: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // ── Data helpers ──────────────────────────────────────────────
+    const STORAGE_KEY = 'jieshen_v1';
+
+    function loadData() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+      catch { return {}; }
+    }
+    function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
+    function todayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function daysAgo(n) {
+      const d = new Date(); d.setDate(d.getDate() - n);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function calcStreak(checked) {
+      let streak = 0;
+      for (let i = 0; i < 365; i++) {
+        const d = daysAgo(i);
+        if (checked && checked[d]) { streak++; } else { break; }
+      }
+      return streak;
+    }
+
+    const QUOTES = [
+      '清净不是压抑，是选择。',
+      '每一次克制，都是力量的体现。',
+      '你比你想象的更自由。',
+      '欲望如浪，观其起落，终会平息。',
+      '今日的坚持，是明日的底气。',
+      '戒不是禁锢，是醒觉。',
+      '守住心念，守住人生。',
+      '一念清净，烦恼自息。',
+    ];
+    function randomQuote() { return QUOTES[Math.floor(Math.random() * QUOTES.length)]; }
+
+    // ── State ──────────────────────────────────────────────────────
+    let data = loadData();
+    let currentTab = 'home';
+    let showOath = false;
+    let showQuote = false;
+    let todayChecked = false;
+    let pinSet = !!data.pin;
+    let locked = !!data.pin;
+    let pinInputStr = '';
+    let pinError = false;
+    let pinSetupStep = 0;
+    let pinSetupInput = '';
+    let pinSetupMsg = '';
+    let showPinSetup = false;
+
+    // Timer state
+    let timerRunning = false;
+    let timerPreset = 15;
+    let timerRemaining = 15 * 60;
+    let timerDone = false;
+    let timerInterval = null;
+    let timerPhase = 'hold';
+    let timerTotal = 0;
+
+    // Calendar state
+    let calYear = new Date().getFullYear();
+    let calMonth = new Date().getMonth();
+
+    // ── Render ─────────────────────────────────────────────────────
+    function render() {
+      const root = document.getElementById('root');
+
+      if (pinSet && locked) {
+        root.innerHTML = renderLockScreen();
+        attachLockEvents();
+        return;
+      }
+
+      if (showOath) {
+        root.innerHTML = renderOathModal();
+        document.querySelector('.modal-btn').onclick = handleOathConfirm;
+        return;
+      }
+
+      root.innerHTML = `
+        <div class="page ${currentTab === 'home' ? 'active' : ''}" id="page-home">${renderHome()}</div>
+        <div class="page ${currentTab === 'timer' ? 'active' : ''}" id="page-timer">${renderTimer()}</div>
+        <div class="page ${currentTab === 'calendar' ? 'active' : ''}" id="page-calendar">${renderCalendar()}</div>
+        <div class="page ${currentTab === 'settings' ? 'active' : ''}" id="page-settings">${renderSettings()}</div>
+        <nav class="tab-bar">
+          <button class="tab-btn ${currentTab === 'home' ? 'active' : ''}" data-tab="home">首</button>
+          <button class="tab-btn ${currentTab === 'timer' ? 'active' : ''}" data-tab="timer">息</button>
+          <button class="tab-btn ${currentTab === 'calendar' ? 'active' : ''}" data-tab="calendar">历</button>
+          <button class="tab-btn ${currentTab === 'settings' ? 'active' : ''}" data-tab="settings">设</button>
+        </nav>
+      `;
+
+      attachPageEvents();
+    }
+
+    function renderHome() {
+      const streak = calcStreak(data.checked);
+      const streakDisplay = streak >= 30 ? `${Math.floor(streak/30)} 个月` : streak >= 7 ? `${Math.floor(streak/7)} 周` : streak;
+      const streakUnit = streak >= 30 ? '月' : streak >= 7 ? '周' : '天';
+      const urgeCount = data.urgeCount || 0;
+      const totalDays = data.checked ? Object.keys(data.checked).length : 0;
+
+      return `
+        <div class="streak-display">
+          <div class="streak-number">${streak}</div>
+          <div class="streak-unit">${streakUnit}</div>
+          <div class="streak-label">连续清净</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-val">${urgeCount}</div>
+            <div class="stat-lbl">冲动次数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val">${totalDays}</div>
+            <div class="stat-lbl">总打卡天数</div>
+          </div>
+        </div>
+        <div class="oath-section">
+          <div class="oath-text">今日我选择清净<br />为自己负责 · 守住心念</div>
+          <button class="checkin-btn ${todayChecked ? 'checked' : ''}" id="checkin-btn">
+            ${todayChecked ? '✓ 今日已打卡' : '打卡'}
+          </button>
+        </div>
+        ${showQuote ? `<div class="quote">${randomQuote()}</div>` : ''}
+      `;
+    }
+
+    function renderTimer() {
+      if (timerDone) {
+        return `
+          <div class="timer-page">
+            <div class="timer-done">
+              <h3>你度过了这次冲动</h3>
+              <p>欲望如浪，观其起落。<br />你选择了不被裹挟。</p>
+            </div>
+            <div class="timer-controls">
+              <button class="timer-btn" id="timer-again">再来一次</button>
+            </div>
+            <div class="quote" style="margin-top:40px">${randomQuote()}</div>
+          </div>
+        `;
+      }
+      if (!timerRunning) {
+        return `
+          <div class="timer-page">
+            <div style="font-size:13px;color:var(--text-muted);letter-spacing:4px;margin-bottom:24px">URGE SURFING</div>
+            <div class="timer-presets">
+              ${[5,10,15,20,30].map(m => `
+                <button class="preset-btn ${timerPreset===m?'active':''}" data-preset="${m}">${m}min</button>
+              `).join('')}
+            </div>
+            <div class="breath-circle">
+              <div class="timer-display">${fmt(timerRemaining)}</div>
+              <div class="timer-phase">就绪</div>
+            </div>
+            <div class="timer-controls">
+              <button class="timer-btn" id="timer-start">开始</button>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="timer-page">
+          <div class="breath-circle ${timerPhase}">
+            <div class="timer-display">${fmt(timerRemaining)}</div>
+            <div class="timer-phase">${timerPhase==='inhale'?'吸气':timerPhase==='hold'?'屏息':'呼气'}</div>
+          </div>
+          <div class="timer-controls">
+            <button class="timer-btn cancel" id="timer-cancel">取消</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCalendar() {
+      const checked = data.checked || {};
+      const today = todayStr();
+      const firstDay = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+      const cells = [];
+      for (let i = 0; i < firstDay; i++) cells.push(null);
+      for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+      const monthName = `${calYear}年 ${calMonth+1}月`;
+
+      return `
+        <div class="calendar-header">
+          <button class="cal-nav-btn" id="cal-prev">‹</button>
+          <div class="cal-month">${monthName}</div>
+          <button class="cal-nav-btn" id="cal-next">›</button>
+        </div>
+        <div class="calendar-grid">
+          ${['日','一','二','三','四','五','六'].map(d => `<div class="cal-day-name">${d}</div>`).join('')}
+          ${cells.map((day, i) => {
+            if (!day) return `<div class="cal-day empty" key="e${i}"></div>`;
+            const dayStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const isChecked = !!checked[dayStr];
+            const isToday = dayStr === today;
+            const isFuture = dayStr > today;
+            const cls = [
+              'cal-day',
+              isChecked ? 'checked' : '',
+              isToday && !isChecked ? 'today' : '',
+              isFuture ? 'future' : '',
+              !isChecked && !isToday && !isFuture ? 'unchecked' : ''
+            ].filter(Boolean).join(' ');
+            return `<div class="${cls}" key="${day}">${day}</div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderSettings() {
+      const pinEnabled = !!data.pin;
+      return `
+        <ul class="settings-list">
+          <li class="settings-item">
+            <div>
+              <div class="settings-label">PIN 密码锁</div>
+              <div class="settings-desc">启用后每次打开需输入 PIN</div>
+            </div>
+            <button class="toggle ${pinEnabled ? 'on' : ''}" id="pin-toggle"></button>
+          </li>
+          <li class="settings-item">
+            <div>
+              <div class="settings-label">导出数据</div>
+              <div class="settings-desc">下载 JSON 格式备份</div>
+            </div>
+            <button class="settings-export-btn" id="export-btn">导出</button>
+          </li>
+        </ul>
+        <div class="settings-danger">
+          <button class="settings-danger-btn" id="clear-btn">清除所有数据</button>
+        </div>
+        <div class="quote" style="margin-top:40px">
+          你的数据只存在本地设备。<br />我们无法恢复已删除的数据。
+        </div>
+      `;
+    }
+
+    function renderLockScreen() {
+      return `
+        <div class="lock-screen">
+          <div class="lock-title">请输入 PIN</div>
+          <div class="lock-dots">
+            ${[0,1,2,3].map(i => `<div class="lock-dot ${pinInputStr.length>i?'filled':''}" key="${i}"></div>`).join('')}
+          </div>
+          ${pinError ? `<div style="color:var(--danger);font-size:13px;letter-spacing:2px;margin-bottom:16px">密码错误</div>` : ''}
+          <div class="pin-keypad">
+            ${[[1,2,3],[4,5,6],[7,8,9],[' ','0','⌫']].map((row, ri) =>
+              row.map((k, ki) => {
+                if (k === ' ') return `<div class="pin-key empty" key="${ri}-${ki}"></div>`;
+                const isBack = k === '⌫';
+                return `<div class="pin-key" data-key="${isBack ? 'back' : k}" key="${ri}-${ki}">${k}</div>`;
+              }).join('')
+            ).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPinSetup() {
+      const title = pinSetupStep === 0 ? '设置 PIN' : '确认 PIN';
+      return `
+        <div class="lock-screen">
+          <div class="lock-title">${title}</div>
+          <div class="lock-dots">
+            ${[0,1,2,3].map(i => `<div class="lock-dot ${pinSetupInput.length>i?'filled':''}" key="${i}"></div>`).join('')}
+          </div>
+          ${pinSetupMsg ? `<div style="color:var(--danger);font-size:13px;letter-spacing:2px;margin-bottom:16px">${pinSetupMsg}</div>` : ''}
+          <div class="pin-keypad">
+            ${[[1,2,3],[4,5,6],[7,8,9],[' ','0','⌫']].map((row, ri) =>
+              row.map((k, ki) => {
+                if (k === ' ') return `<div class="pin-key empty" key="${ri}-${ki}"></div>`;
+                const isBack = k === '⌫';
+                return `<div class="pin-key" data-key="${isBack ? 'back' : k}" key="${ri}-${ki}">${k}</div>`;
+              }).join('')
+            ).join('')}
+          </div>
+          <button onclick="cancelPinSetup()" style="margin-top:24px;background:none;border:none;color:var(--text-muted);font-size:13px;letter-spacing:2px;cursor:pointer">取消</button>
+        </div>
+      `;
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────
+    function fmt(secs) {
+      const m = String(Math.floor(secs/60)).padStart(2,'0');
+      const s = String(secs%60).padStart(2,'0');
+      return `${m}:${s}`;
+    }
+
+    // ── Events ─────────────────────────────────────────────────────
+    function attachPageEvents() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = () => { currentTab = btn.dataset.tab; render(); };
+      });
+
+      const checkinBtn = document.getElementById('checkin-btn');
+      if (checkinBtn && !todayChecked) {
+        checkinBtn.onclick = handleCheckin;
+      }
+
+      // Timer events
+      const timerStart = document.getElementById('timer-start');
+      if (timerStart) timerStart.onclick = startTimer;
+
+      const timerCancel = document.getElementById('timer-cancel');
+      if (timerCancel) timerCancel.onclick = cancelTimer;
+
+      const timerAgain = document.getElementById('timer-again');
+      if (timerAgain) timerAgain.onclick = () => { timerDone = false; timerPhase = 'hold'; timerRemaining = timerPreset * 60; render(); };
+
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.onclick = () => { timerPreset = parseInt(btn.dataset.preset); timerRemaining = timerPreset * 60; render(); };
+      });
+
+      // Calendar events
+      const calPrev = document.getElementById('cal-prev');
+      if (calPrev) calPrev.onclick = () => { if (calMonth===0){calYear--;calMonth=11;}else calMonth--; render(); };
+
+      const calNext = document.getElementById('cal-next');
+      if (calNext) calNext.onclick = () => { if (calMonth===11){calYear++;calMonth=0;}else calMonth++; render(); };
+
+      // Settings events
+      const pinToggle = document.getElementById('pin-toggle');
+      if (pinToggle) pinToggle.onclick = handlePinToggle;
+
+      const exportBtn = document.getElementById('export-btn');
+      if (exportBtn) exportBtn.onclick = handleExport;
+
+      const clearBtn = document.getElementById('clear-btn');
+      if (clearBtn) clearBtn.onclick = handleClear;
+    }
+
+    function attachLockEvents() {
+      document.querySelectorAll('.pin-key').forEach(key => {
+        key.onclick = () => {
+          const k = key.dataset.key;
+          if (k === 'back') { pinInputStr = ''; }
+          else { pinInputStr += k; }
+          if (pinInputStr.length === 4) {
+            if (pinInputStr === data.pin) { locked = false; pinError = false; render(); }
+            else { pinError = true; pinInputStr = ''; render(); }
+          } else { render(); }
+        };
+      });
+    }
+
+    // ── Actions ────────────────────────────────────────────────────
+    function handleCheckin() {
+      const today = todayStr();
+      data.checked = { ...(data.checked||{}), [today]: true };
+      data.urgeCount = data.urgeCount || 0;
+      saveData(data);
+      todayChecked = true;
+      showQuote = true;
+      render();
+      setTimeout(() => { showQuote = false; render(); }, 4000);
+    }
+
+    function handleOathConfirm() {
+      showOath = false;
+      handleCheckin();
+    }
+
+    function startTimer() {
+      timerRunning = true;
+      timerDone = false;
+      timerRemaining = timerPreset * 60;
+      timerTotal = timerPreset * 60;
+      timerPhase = 'inhale';
+      let lastSec = Date.now();
+
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - lastSec) / 1000);
+        if (elapsed < 1) return;
+        lastSec = now;
+        timerRemaining = Math.max(0, timerRemaining - elapsed);
+
+        const totalElapsed = timerTotal - timerRemaining;
+        const cyclePos = totalElapsed % 12;
+        if (cyclePos < 4) timerPhase = 'inhale';
+        else if (cyclePos < 7) timerPhase = 'hold';
+        else timerPhase = 'exhale';
+
+        if (timerRemaining <= 0) {
+          clearInterval(timerInterval);
+          timerRunning = false;
+          timerDone = true;
+          timerPhase = 'done';
+          data.urgeCount = (data.urgeCount || 0) + 1;
+          saveData(data);
+          render();
+        } else {
+          render();
+        }
+      }, 200);
+      render();
+    }
+
+    function cancelTimer() {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      timerRemaining = timerPreset * 60;
+      timerPhase = 'hold';
+      render();
+    }
+
+    function handlePinToggle() {
+      if (data.pin) {
+        // Disable
+        const { pin, ...rest } = data;
+        data = rest;
+        saveData(data);
+        pinSet = false;
+        render();
+      } else {
+        showPinSetup = true;
+        pinSetupStep = 0;
+        pinSetupInput = '';
+        pinSetupMsg = '';
+        document.getElementById('root').innerHTML = renderPinSetup();
+        attachPinSetupEvents();
+      }
+    }
+
+    function attachPinSetupEvents() {
+      document.querySelectorAll('.pin-key').forEach(key => {
+        key.onclick = () => {
+          const k = key.dataset.key;
+          if (k === 'back') { pinSetupInput = ''; }
+          else { pinSetupInput += k; }
+
+          if (pinSetupInput.length === 4) {
+            if (pinSetupStep === 0) {
+              pinSetupStep = 1;
+              pinSetupInput = '';
+              document.getElementById('root').innerHTML = renderPinSetup();
+              attachPinSetupEvents();
+            } else {
+              if (pinSetupInput === pinSetupInput) {
+                data.pin = pinSetupInput;
+                saveData(data);
+                pinSet = true;
+                showPinSetup = false;
+                render();
+              } else {
+                pinSetupMsg = '两次输入不一致';
+                pinSetupStep = 0;
+                pinSetupInput = '';
+                document.getElementById('root').innerHTML = renderPinSetup();
+                attachPinSetupEvents();
+              }
+            }
+          } else {
+            document.getElementById('root').innerHTML = renderPinSetup();
+            attachPinSetupEvents();
+          }
+        };
+      });
+    }
+
+    window.cancelPinSetup = function() {
+      showPinSetup = false;
+      pinSetupStep = 0;
+      pinSetupInput = '';
+      pinSetupMsg = '';
+      render();
+    };
+
+    function handleExport() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `jieshen_backup_${todayStr()}.json`; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function handleClear() {
+      if (confirm('确定要清除所有数据吗？此操作不可恢复。')) {
+        localStorage.removeItem(STORAGE_KEY);
+        window.location.reload();
+      }
+    }
+
+    // ── Init ───────────────────────────────────────────────────────
+    (function init() {
+      const lastVisit = data.lastVisit;
+      const today = todayStr();
+      todayChecked = !!(data.checked && data.checked[today]);
+      if (lastVisit !== today) {
+        showOath = true;
+        data.lastVisit = today;
+        saveData(data);
+      }
+      render();
+    })();
+  </script>
+</body>
+</html>

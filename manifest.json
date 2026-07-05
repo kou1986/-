@@ -1,0 +1,17 @@
+{
+  "name": "戒身",
+  "short_name": "戒身",
+  "description": "每日誓言 · 打卡记录 · 连续天数统计",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230a0a0b'/><text y='130' x='96' text-anchor='middle' font-size='110'>🕯️</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
